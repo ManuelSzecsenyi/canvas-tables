@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset=utf-8>
+  <title>Table plan test</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+
+    canvas {
+        border: 1px solid black;
+    }
+
+    #guests {
+        list-style: none;
+        padding: 0;
+    }
+
+    #guests li {
+        background-color: #eee;
+        padding: 10px;
+        margin-bottom: 5px;
+    }
+
+    #assignable {
+        display: none;
+    }
+
+    #assignable.active {
+        display: inline-block;
+    }
+
+  </style>
+</head>
+<body>
+
+    <h1>Table Demo</h1>
+
+    <button onclick="addTable()">Add table</button>
+    <button onclick="reset()">Reset plan</button>
+    <button onclick="save()">Save plan</button>
+    <button onclick="load()">Load plan</button>
+    <button onclick="toggleAsignMode()">Toggle asign mode</button>
+
+    <div style="display: flex; gap: 10px;">
+        <canvas id="canvas" width="600" height="500"></canvas>
+
+        <div>
+            <h2>Tables</h2>
+
+            <ul id="tables">
+
+            </ul>
+
+            <h2>Guests <small id="assignable">Assignable</small></h2>
+
+            <ul id="guests">
+                <li onclick="assignTable(event)" style="background-color: rgb(59, 110, 154);">Guest 1</li>
+                <li onclick="assignTable(event)" style="background-color: rgb(201, 84, 84);">Guest 2</li>
+                <li onclick="assignTable(event)" style="background-color: rgb(71, 154, 71);">Guest 3</li>
+            </ul>
+        </div>
+    </div>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/fabric"></script>
+    <script>
+    const canvas = new fabric.Canvas('canvas');
+
+    let listOfTables = [];
+    tableCount = 1;
+    assignMode = false;
+    isAssigning = false;
+
+    load(); 
+
+    function addTable() {
+        const rect = new fabric.Rect({
+            width: 50,
+            height: 50,
+            fill: 'black',
+        });
+
+        var text = new fabric.Text( `${tableCount}`, {
+            fontSize: 20,
+            fill: 'white',
+            fontFamily: 'Arial',
+        });
+
+        text.set("top", 25 - (text.width / 2));
+        text.set("left", 25 - (text.height / 2));
+        
+        var group = new fabric.Group([rect, text], {
+            left: 100,
+            top: 25,
+        });
+        canvas.add(group);
+
+        listOfTables.push({
+            number: tableCount,
+            reference: group,
+        });
+
+        document.getElementById('tables').innerHTML += `<li>Table ${tableCount}</li>`;
+
+        tableCount++;
+    }
+
+    function reset() {
+        tableCount = 1;
+        document.getElementById('tables').innerHTML = '';
+        canvas.clear();
+    }
+
+    function save() {
+        const json = JSON.stringify(canvas);
+        const plan = {
+            "json": json,
+            "listOfTables": listOfTables
+        }
+        localStorage.setItem('plan', JSON.stringify(plan));
+    }
+
+    function load() {
+        const plan = JSON.parse(localStorage.getItem('plan'));
+
+        listOfTables = plan.listOfTables;
+        listOfTables.forEach(table => {
+            document.getElementById('tables').innerHTML += `<li>Table ${tableCount}</li>`;
+            tableCount++;
+        });
+
+
+        canvas.loadFromJSON(plan.json);
+    }
+
+
+    function toggleAsignMode() {
+        // Disable table editing
+        canvas.forEachObject(function(obj) {
+            obj.selectable = !obj.selectable
+        });
+
+        // Toggle asignable class
+        document.getElementById('assignable').classList.toggle('active');
+
+        assignMode = !assignMode;
+    }
+
+    function assignTable(e) {
+        // If assign mode is on
+        if(!assignMode) return;
+
+        const color = e.target.style.backgroundColor;
+
+        canvas.forEachObject(function(obj) {
+            obj.on('mouseup', (e) => {
+                e.target.getObjects()[0].set('fill', color);
+                console.log(e.target);
+                canvas.renderAll();
+
+                // Remove event listener again
+                canvas.forEachObject(function(obj) {
+                    obj.off('mouseup');
+                });
+            });
+        });
+            
+
+    }
+
+    
+    </script>
+
+</body>
+
+
+</html>
